@@ -30,4 +30,4 @@ Run `test.m` to test the code with representative parameters.
   - `niters`: Number of patchmatch iterations
 
 # Some common problems:
-1. When running the code, Matlab throws an error about libTiff. See [this]([200~https://groups.google.com/forum/#!topic/caffe-users/c1ZSm-nacEo) for a solution. Essentially you need to ask Matlab to look for libraries elsewhere.
+1. When running the code, Matlab throws an error about libTiff. See [this](https://groups.google.com/forum/#!topic/caffe-users/c1ZSm-nacEo) for a solution. Essentially you need to ask Matlab to look for libraries elsewhere.
