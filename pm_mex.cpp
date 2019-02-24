@@ -85,27 +85,25 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	left_disparity = (double *)mxGetPr(plhs[0]);
 	right_disparity = (double *)mxGetPr(plhs[1]);
 
-	/* Okay so data is good and loaded. Convert to CV matrices */
-	cv::Mat img1(w1, h1, CV_8UC3, left_img);
-	cv::Mat img2(w2, h2, CV_8UC3, right_img);
-
-	cv::namedWindow("Display window", cv::WINDOW_AUTOSIZE );
-	cv::imshow("Display window", img1);
-	cv::waitKey(1000);
-	cv::destroyAllWindows();
-
-	/* Manually copy data for now 
+	/* There is an inconsistency in how data is store in Matlab and OpenCv 
+	 * arrays. So just brute-force copy to a new image array. */
+	cv::Mat img1(h1, w1, CV_8UC3, cv::Scalar(0, 0, 0));
+	cv::Mat img2(h2, w2, CV_8UC3, cv::Scalar(0, 0, 0));
+	
+	/* Manually copy the data */
+	#pragma omp parallel for
 	for (idx3 = 0; idx3 < 3; idx3++)
 	{
 		for (idx2 = 0; idx2 < w1; idx2++)
 		{
 			for (idx1 = 0; idx1 < h1; idx1++)
 			{
-				img1(idx1, idx2, idx3) = left_img[idx1 + h1*idx2 + h1*w1*idx3];
-				img2(idx1, idx2, idx3) = right_img[idx1 + h1*idx2 + h1*w1*idx3];
+				img1.at<cv::Vec3b>(idx1, idx2)[2-idx3] = left_img[idx1 + h1*idx2 + h1*w1*idx3];
+				img2.at<cv::Vec3b>(idx1, idx2)[2-idx3] = right_img[idx1 + h1*idx2 + h1*w1*idx3];
 			}
 		}
-	}*/
+	}
+	printf("Copied input data...\n");
 
 	/* Now run PatchMatch */
 	pm::PatchMatch patch_match(alpha, gamma, tau_c, tau_g, winsize,
@@ -114,15 +112,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	patch_match.process(niters);
 	patch_match.postProcess();
 	
-	printf("Computing disparity\n");
 	cv::Mat1f disp1 = patch_match.getLeftDisparityMap();
 	cv::Mat1f disp2 = patch_match.getRightDisparityMap();
 
-	cv::normalize(disp1, disp1, 0, 255, cv::NORM_MINMAX);
-	cv::imwrite("disparity1.png", disp1);
-
 	/* Manually copy data just to be sure */
-	printf("Copying data\n");
+	printf("Copying output data...\n");
 	try
 	{
 		#pragma omp parallel for
@@ -130,11 +124,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		{
 			for (idx1 = 0; idx1 < h1; idx1++)
 			{
-				left_disparity[h1*idx2 + idx1] = (double)disp1.at<float>(idx2, idx1);
-				right_disparity[h1*idx2 + idx1] = (double)disp2.at<float>(idx2, idx1);
+				left_disparity[h1*idx2 + idx1] = (double)disp1.at<float>(idx1, idx2);
+				right_disparity[h1*idx2 + idx1] = (double)disp2.at<float>(idx1, idx2);
 			}
 		}
-		printf("Completed copying\n");
 	}
 	catch (const std::exception& e)
 	{
