@@ -1,0 +1,8 @@
+# Ignore compiled mex files
+*.mexa64
+*.mexw64
+
+# Also ignore temporary files
+*.swp
+*.swo
+*~
